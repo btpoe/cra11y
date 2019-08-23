@@ -1,0 +1,38 @@
+.project-pane {
+    --pane-background: #EEEEEE;
+
+    background: var(--pane-background);
+    height: 100vh;
+    flex: 1;
+
+    ion-grid {
+        --ion-grid-padding: 0;
+
+        ion-col {
+            padding: 0;
+        }
+    }
+}
+
+.project-pane ion-header ion-toolbar {
+    align-items: center;
+    display: flex;
+    height: calc(56px + 32px);
+}
+
+.project-pane ion-header ion-toolbar ion-title * {
+    margin: 0 !important;
+}
+
+.project-pane ion-header ion-toolbar ion-title h2 {
+    font-size: 1em;
+}
+
+.project-pane ion-header ion-toolbar ion-title p {
+    font-size: 0.75em;
+}
+
+.project-pane .project-pane-body {
+    background: #f5f5f5;
+    // display: flex;
+}
