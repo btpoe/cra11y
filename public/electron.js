@@ -2,9 +2,16 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const isDevMode = require('electron-is-dev');
 
 const path = require('path');
+const puppeteer = require('puppeteer');
+
+const webpage = require('./browser');
+const AsyncPool = require('./utils/AsyncPool');
 
 // Place holders for our windows so they don't get garbage collected.
 let mainWindow = null;
+
+// shared browser instance for all pages
+let browser;
 
 // Create simple menu for easy devtools access, and for demo
 // const menuTemplateDev = [
@@ -42,6 +49,12 @@ async function createWindow () {
     mainWindow.show();
   });
 
+  if (!browser) {
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox']
+    });
+  }
+
   if (isDevMode) {
     // Set our above template to the Menu Object if we are in development mode, dont want users having the devtools.
     // Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplateDev));
@@ -64,6 +77,10 @@ app.on('window-all-closed', function () {
   }
 });
 
+app.on('before-quit', () => {
+  browser.close();
+})
+
 app.on('activate', function () {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
@@ -72,11 +89,25 @@ app.on('activate', function () {
   }
 });
 
-const webpage = require('./browser');
+const pool = new AsyncPool(10);
 
 // Define any IPC or other custom functionality below here
 ipcMain.on('crawl-async', async (event, arg) => {
-  const response = await webpage(arg);
+  let response = null;
 
-  event.sender.send('crawl-reply', { url: arg.url, response })
+  try {
+    response = await pool.add(() => webpage(browser, arg));
+  } catch (e) {
+    event.sender.send('crawl-fail', { url: arg.url });
+  }
+
+  // responses after the pool is flushed are `null`
+  if (response) {
+    event.sender.send('crawl-reply', { url: arg.url, response })
+  }
+});
+
+// Define any IPC or other custom functionality below here
+ipcMain.on('crawl-flush', async () => {
+  pool.flush();
 });
